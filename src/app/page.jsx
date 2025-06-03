@@ -42,7 +42,21 @@ export default function Home() {
                   Upload
                 </button>
               </div>
-              <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 bg-white px-6 py-10">
+              <div
+                className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 bg-white px-6 py-10"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    if (file.size > 50 * 1024 * 1024) {
+                      alert("File size exceeds 50MB. Please upload a smaller video.");
+                      return;
+                    }
+                    setUploadedFile(file);
+                  }
+                }}
+              >
                 <div className="text-center">
                   <PhotoIcon
                     aria-hidden="true"
