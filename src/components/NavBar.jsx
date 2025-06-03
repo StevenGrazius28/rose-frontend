@@ -2,7 +2,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuIt
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const navigation = [
-  { name: 'Video Detection', href: '#', current: true },
+  { name: 'Video Detection', href: '/', current: true },
   { name: 'Webcam Detection', href: '/webcam', current: false },
 ]
 
