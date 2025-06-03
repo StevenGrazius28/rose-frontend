@@ -123,12 +123,40 @@ export default function Home() {
               </p>
             </div>
             {fileUploaded && uploadedFile && (
-              <video
-                src={URL.createObjectURL(uploadedFile)}
-                controls
-                className="w-full aspect-video rounded border border-gray-300"
-                webkit-playsinline="true"
-              />
+              <>
+                <video
+                  src={URL.createObjectURL(uploadedFile)}
+                  controls
+                  className="w-full aspect-video rounded border border-gray-300"
+                  webkit-playsinline="true"
+                />
+                {fileUploaded && uploadedFile && (
+                  <button
+                    onClick={async () => {
+                      const formData = new FormData();
+                      formData.append('video', uploadedFile);
+
+                      try {
+                        const res = await fetch('http://localhost:5000/api/process-video', {
+                          method: 'POST',
+                          body: formData,
+                        });
+
+                        if (!res.ok) throw new Error('Failed to upload video');
+                        const result = await res.json();
+                        console.log('API response:', result);
+                        alert('Video successfully sent to backend!');
+                      } catch (err) {
+                        console.error('Error sending video:', err);
+                        alert('Failed to send video');
+                      }
+                    }}
+                    className="mt-4 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                  >
+                    Process video
+                  </button>
+                )}
+              </>
             )}
 
             {/* Step 3 */}
