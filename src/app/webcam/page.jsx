@@ -9,8 +9,12 @@ import {PhotoIcon} from "@heroicons/react/24/solid";
 export default function Home() {
     const [fileUploaded, setFileUploaded] = useState(false);
     const [uploadedFile, setUploadedFile] = useState(null);
-    const [showWebcam, setShowWebcam] = useState(false);2
+    const [showWebcam, setShowWebcam] = useState(false);
     const videoRef = useRef(null);
+    // --- Webcam streaming frame capture additions ---
+    const canvasRef = useRef(null);
+    const isProcessing = useRef(false);
+    const intervalRef = useRef(null);
 
     useEffect(() => {
         if (showWebcam && videoRef.current) {
@@ -23,6 +27,53 @@ export default function Home() {
                     alert("Unable to access webcam");
                 });
         }
+    }, [showWebcam]);
+
+    // --- Frame capture and API sending effect ---
+    useEffect(() => {
+        if (showWebcam && videoRef.current) {
+            const startStreaming = () => {
+                intervalRef.current = setInterval(async () => {
+                    if (!videoRef.current || !canvasRef.current || isProcessing.current) return;
+
+                    isProcessing.current = true;
+
+                    const canvas = canvasRef.current;
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = videoRef.current.videoWidth;
+                    canvas.height = videoRef.current.videoHeight;
+                    ctx.drawImage(videoRef.current, 0, 0);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+
+                    try {
+                        await fetch("http://localhost:8000/track/realtime/stream", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ image: dataUrl })
+                        });
+                    } catch (err) {
+                        console.error("Failed to send frame", err);
+                    }
+
+                    isProcessing.current = false;
+                }, 100); // 10 FPS
+            };
+
+            if (videoRef.current.readyState >= 2) {
+                startStreaming();
+            } else {
+                videoRef.current.onloadeddata = () => startStreaming();
+            }
+        }
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
     }, [showWebcam]);
 
     return (
@@ -75,6 +126,7 @@ export default function Home() {
                                         playsInline
                                         className="w-full aspect-video rounded border border-gray-300"
                                     />
+                                    <canvas ref={canvasRef} className="hidden" />
                                 </div>
                             )}
                         </div>
