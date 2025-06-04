@@ -1,193 +1,281 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Footer } from '@/components/Footer'
 import NavBar from '@/components/NavBar'
-import { ChevronDownIcon } from '@heroicons/react/16/solid'
-import {PhotoIcon} from "@heroicons/react/24/solid";
 
-export default function Home() {
-  const [fileUploaded, setFileUploaded] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
+// Simple icons
+const ImageIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+);
 
-  return (
-    <>
-      <NavBar />
-      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-        <div className="shadow overflow-hidden rounded-lg bg-white">
-          <div className="px-4 py-2 sm:px-3">
-            <h1 className="font-semibold">Step 1 : Upload your video</h1>
-          </div>
-          <div className="rounded-lg bg-[#F3F5FD] px-4 py-5 sm:p-6">
-            <div className="col-span-full">
-              <div className="flex items-start justify-between">
-                <label
-                  htmlFor="cover-photo"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Upload your video
-                </label>
-                <button
-                  type="button"
-                  className="ml-4 inline-flex items-center rounded-md bg-[#202020] px-4 py-1 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                  onClick={() => {
-                    if (!uploadedFile) {
-                      alert('Please select a file first.');
-                    } else {
-                      console.log('Uploading:', uploadedFile.name);
-                      setFileUploaded(true);
-                    }
-                  }}
-                >
-                  Upload
-                </button>
-              </div>
-              <div
-                className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 bg-white px-6 py-10"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) {
-                    if (file.size > 50 * 1024 * 1024) {
-                      alert("File size exceeds 50MB. Please upload a smaller video.");
-                      return;
-                    }
-                    setUploadedFile(file);
-                  }
-                }}
-              >
-                <div className="text-center">
-                  <PhotoIcon
-                    aria-hidden="true"
-                    className="mx-auto size-12 text-gray-300"
-                  />
-                  <div className="mt-4 flex text-sm/6 text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 focus-within:outline-none hover:text-indigo-500"
-                    >
-                      <span>Click here</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        accept="video/*"
-                        className="sr-only"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            if (file.size > 50 * 1024 * 1024) {
-                              alert("File size exceeds 50MB. Please upload a smaller video.");
-                              e.target.value = '';
-                              return;
-                            }
-                            setUploadedFile(file);
-                          }
-                        }}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs/5 text-gray-600">
-                    MP4, AVI, MOV up to 50MB
-                  </p>
-                  {uploadedFile && (
-                    <div className="mt-4 text-sm text-gray-700">
-                      <p><strong>Uploaded file(s):</strong> {uploadedFile.name}</p>
-                      <a
-                        href={URL.createObjectURL(uploadedFile)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 hover:underline"
-                      >
-                        Preview file
-                      </a>
+const VideoIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+);
+
+const CameraIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2-2H5a2 2 0 01-2-2V9z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+export default function Dashboard() {
+    const [stats, setStats] = useState({
+        imageTracking: { total: 0, lastUsed: 'Never' },
+        videoTracking: { total: 0, lastUsed: 'Never' },
+        liveTracking: { total: 0, lastUsed: 'Never' },
+        totalRoses: 0,
+        loading: true
+    });
+
+    const [recentActivity, setRecentActivity] = useState([]);
+
+    // Fetch stats from your APIs
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Get live tracking count - you can call your /track/realtime/count endpoint
+                const liveResponse = await fetch('/track/realtime/count');
+                const liveData = liveResponse.ok ? await liveResponse.json() : { count: 0 };
+
+                // For now, simulate file system stats or use localStorage to track usage
+                const imageCount = localStorage.getItem('imageTrackingCount') || 0;
+                const videoCount = localStorage.getItem('videoTrackingCount') || 0;
+                const liveCount = localStorage.getItem('liveSessionCount') || 0;
+                
+                // Calculate total roses from localStorage or use live data
+                const totalRoses = localStorage.getItem('totalRosesDetected') || liveData.count || 0;
+
+                setStats({
+                    imageTracking: { 
+                        total: parseInt(imageCount), 
+                        lastUsed: localStorage.getItem('lastImageTracking') || 'Never' 
+                    },
+                    videoTracking: { 
+                        total: parseInt(videoCount), 
+                        lastUsed: localStorage.getItem('lastVideoTracking') || 'Never' 
+                    },
+                    liveTracking: { 
+                        total: parseInt(liveCount), 
+                        lastUsed: localStorage.getItem('lastLiveTracking') || 'Never' 
+                    },
+                    totalRoses: parseInt(totalRoses),
+                    loading: false
+                });
+
+                // Get recent activity from localStorage
+                const recentData = JSON.parse(localStorage.getItem('recentActivity') || '[]');
+                setRecentActivity(recentData);
+
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                setStats(prev => ({ ...prev, loading: false }));
+            }
+        };
+
+        fetchStats();
+        // Refresh stats every 30 seconds
+        const interval = setInterval(fetchStats, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Function to add activity and update stats
+    const addActivity = (type, filename, roseCount) => {
+        const activity = {
+            id: Date.now(),
+            type,
+            filename,
+            roses: roseCount,
+            time: new Date().toLocaleString()
+        };
+
+        // Update recent activity
+        const updated = [activity, ...recentActivity.slice(0, 4)];
+        setRecentActivity(updated);
+        localStorage.setItem('recentActivity', JSON.stringify(updated));
+
+        // Update counters
+        const currentCount = localStorage.getItem(`${type}TrackingCount`) || 0;
+        localStorage.setItem(`${type}TrackingCount`, parseInt(currentCount) + 1);
+        localStorage.setItem(`last${type.charAt(0).toUpperCase() + type.slice(1)}Tracking`, new Date().toLocaleString());
+        
+        // Update total roses
+        const currentRoses = localStorage.getItem('totalRosesDetected') || 0;
+        localStorage.setItem('totalRosesDetected', parseInt(currentRoses) + roseCount);
+    };
+
+    if (stats.loading) {
+        return (
+            <>
+                <NavBar />
+                <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading dashboard...</p>
                     </div>
-                  )}
                 </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-10 space-y-6">
-            {/* Step 2 */}
-            <div className="flex items-start">
-              <div className="mr-4 flex flex-col items-center">
-                <div className={`flex h-6 w-14 items-center justify-center rounded text-xs font-semibold text-white ${fileUploaded ? 'bg-black' : 'bg-gray-300'}`}>
-                  Step 2
+                <Footer />
+            </>
+        );
+    }
+
+    return (
+        <>
+            <NavBar />
+            <div className="min-h-screen bg-gray-50 py-8">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                    
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">🌹 Rose Tracking Dashboard</h1>
+                        <p className="text-gray-600">Monitor your rose detection activities</p>
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="text-center">
+                                <p className="text-3xl font-bold text-rose-600">{stats.totalRoses}</p>
+                                <p className="text-sm text-gray-600">Total Roses Detected</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-3xl font-bold text-blue-600">{stats.imageTracking.total}</p>
+                                <p className="text-sm text-gray-600">Images Processed</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-3xl font-bold text-green-600">{stats.videoTracking.total}</p>
+                                <p className="text-sm text-gray-600">Videos Processed</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-3xl font-bold text-purple-600">{stats.liveTracking.total}</p>
+                                <p className="text-sm text-gray-600">Live Sessions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tracking Methods */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        
+                        {/* Image Tracking */}
+                        <div className="bg-white rounded-lg shadow-sm border p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="p-3 bg-blue-100 rounded-lg">
+                                    <ImageIcon className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div className="ml-4">
+                                    <h3 className="text-lg font-semibold text-gray-900">Image Tracking</h3>
+                                    <p className="text-sm text-gray-500">Upload images to detect roses</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Total processed:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.imageTracking.total}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Last used:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.imageTracking.lastUsed}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => window.location.href = '/image'}
+                                className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors">
+                                Start Image Tracking
+                            </button>
+                        </div>
+
+                        {/* Video Tracking */}
+                        <div className="bg-white rounded-lg shadow-sm border p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="p-3 bg-green-100 rounded-lg">
+                                    <VideoIcon className="w-6 h-6 text-green-600" />
+                                </div>
+                                <div className="ml-4">
+                                    <h3 className="text-lg font-semibold text-gray-900">Video Tracking</h3>
+                                    <p className="text-sm text-gray-500">Upload videos to track roses</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Total processed:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.videoTracking.total}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Last used:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.videoTracking.lastUsed}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => window.location.href = '/video'}
+                                className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md transition-colors">
+                                Start Video Tracking
+                            </button>
+                        </div>
+
+                        {/* Live Tracking */}
+                        <div className="bg-white rounded-lg shadow-sm border p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="p-3 bg-purple-100 rounded-lg">
+                                    <CameraIcon className="w-6 h-6 text-purple-600" />
+                                </div>
+                                <div className="ml-4">
+                                    <h3 className="text-lg font-semibold text-gray-900">Live Tracking</h3>
+                                    <p className="text-sm text-gray-500">Real-time camera detection</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Total sessions:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.liveTracking.total}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Last used:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.liveTracking.lastUsed}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => window.location.href = '/webcam'}
+                                className="w-full mt-4 bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-md transition-colors">
+                                Start Live Tracking
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="bg-white rounded-lg shadow-sm border p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+                        {recentActivity.length > 0 ? (
+                            <div className="space-y-3">
+                                {recentActivity.map((activity) => (
+                                    <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                                        <div className="flex items-center">
+                                            {activity.type === 'image' && <ImageIcon className="w-4 h-4 text-blue-500 mr-3" />}
+                                            {activity.type === 'video' && <VideoIcon className="w-4 h-4 text-green-500 mr-3" />}
+                                            {activity.type === 'live' && <CameraIcon className="w-4 h-4 text-purple-500 mr-3" />}
+                                            <span className="text-sm text-gray-900">{activity.filename}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-sm font-medium text-gray-900">{activity.roses} roses</span>
+                                            <p className="text-xs text-gray-500">{activity.time}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <p className="text-gray-500">No recent activity</p>
+                                <p className="text-sm text-gray-400">Start tracking to see your activity here</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="mt-1 h-full w-px border-l-2 border-dashed bg-gray-300"></div>
-              </div>
-              <p className={`text-base font-semibold ${fileUploaded ? 'text-black' : 'text-gray-400'}`}>
-                Review your video
-              </p>
             </div>
-            {fileUploaded && uploadedFile && (
-              <>
-                <video
-                  src={URL.createObjectURL(uploadedFile)}
-                  controls
-                  className="w-full aspect-video rounded border border-gray-300"
-                  webkit-playsinline="true"
-                />
-                {fileUploaded && uploadedFile && (
-                  <button
-                    onClick={async () => {
-                      const formData = new FormData();
-                      formData.append('video', uploadedFile);
-
-                      try {
-                        const res = await fetch('http://localhost:5000/api/process-video', {
-                          method: 'POST',
-                          body: formData,
-                        });
-
-                        if (!res.ok) throw new Error('Failed to upload video');
-                        const result = await res.json();
-                        console.log('API response:', result);
-                        alert('Video successfully sent to backend!');
-                      } catch (err) {
-                        console.error('Error sending video:', err);
-                        alert('Failed to send video');
-                      }
-                    }}
-                    className="mt-4 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-                  >
-                    Process video
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* Step 3 */}
-            <div className="flex items-start">
-              <div className="mr-4 flex flex-col items-center">
-                <div className="flex h-6 w-14 items-center justify-center rounded bg-gray-300 text-xs font-semibold text-white">
-                  Step 3
-                </div>
-                <div className="mt-1 h-full w-px border-l-2 border-dashed bg-gray-300"></div>
-              </div>
-              <p className="text-base font-semibold text-gray-400">
-                Result: Annotated video and generated data
-              </p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="flex items-start">
-              <div className="mr-4 flex flex-col items-center">
-                <div className="flex h-6 w-14 items-center justify-center rounded bg-gray-300 text-xs font-semibold text-white">
-                  Step 4
-                </div>
-              </div>
-              <p className="text-base font-semibold text-gray-400">
-                Give us feedback
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Footer />
-    </>
-  )
+            <Footer />
+        </>
+    );
 }
