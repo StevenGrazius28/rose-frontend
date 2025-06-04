@@ -24,11 +24,18 @@ const CameraIcon = ({ className }) => (
     </svg>
 );
 
+const ModelIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+);
+
 export default function Dashboard() {
     const [stats, setStats] = useState({
         imageTracking: { total: 0, lastUsed: 'Never' },
         videoTracking: { total: 0, lastUsed: 'Never' },
         liveTracking: { total: 0, lastUsed: 'Never' },
+        modelRetraining: { total: 0, lastUsed: 'Never' },
         totalRoses: 0,
         loading: true
     });
@@ -47,6 +54,7 @@ export default function Dashboard() {
                 const imageCount = localStorage.getItem('imageTrackingCount') || 0;
                 const videoCount = localStorage.getItem('videoTrackingCount') || 0;
                 const liveCount = localStorage.getItem('liveSessionCount') || 0;
+                const retrainingCount = localStorage.getItem('modelRetrainingCount') || 0;
                 
                 // Calculate total roses from localStorage or use live data
                 const totalRoses = localStorage.getItem('totalRosesDetected') || liveData.count || 0;
@@ -63,6 +71,10 @@ export default function Dashboard() {
                     liveTracking: { 
                         total: parseInt(liveCount), 
                         lastUsed: localStorage.getItem('lastLiveTracking') || 'Never' 
+                    },
+                    modelRetraining: { 
+                        total: parseInt(retrainingCount), 
+                        lastUsed: localStorage.getItem('lastModelRetraining') || 'Never' 
                     },
                     totalRoses: parseInt(totalRoses),
                     loading: false
@@ -104,9 +116,11 @@ export default function Dashboard() {
         localStorage.setItem(`${type}TrackingCount`, parseInt(currentCount) + 1);
         localStorage.setItem(`last${type.charAt(0).toUpperCase() + type.slice(1)}Tracking`, new Date().toLocaleString());
         
-        // Update total roses
-        const currentRoses = localStorage.getItem('totalRosesDetected') || 0;
-        localStorage.setItem('totalRosesDetected', parseInt(currentRoses) + roseCount);
+        // Update total roses (for non-retraining activities)
+        if (type !== 'modelRetraining') {
+            const currentRoses = localStorage.getItem('totalRosesDetected') || 0;
+            localStorage.setItem('totalRosesDetected', parseInt(currentRoses) + roseCount);
+        }
     };
 
     if (stats.loading) {
@@ -133,12 +147,12 @@ export default function Dashboard() {
                     {/* Header */}
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">🌹 Rose Tracking Dashboard</h1>
-                        <p className="text-gray-600">Monitor your rose detection activities</p>
+                        <p className="text-gray-600">Monitor your rose detection activities and model training</p>
                     </div>
 
                     {/* Summary Stats */}
                     <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                             <div className="text-center">
                                 <p className="text-3xl font-bold text-rose-600">{stats.totalRoses}</p>
                                 <p className="text-sm text-gray-600">Total Roses Detected</p>
@@ -155,11 +169,15 @@ export default function Dashboard() {
                                 <p className="text-3xl font-bold text-purple-600">{stats.liveTracking.total}</p>
                                 <p className="text-sm text-gray-600">Live Sessions</p>
                             </div>
+                            <div className="text-center">
+                                <p className="text-3xl font-bold text-orange-600">{stats.modelRetraining.total}</p>
+                                <p className="text-sm text-gray-600">Model Retraining</p>
+                            </div>
                         </div>
                     </div>
 
                     {/* Tracking Methods */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         
                         {/* Image Tracking */}
                         <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -244,6 +262,34 @@ export default function Dashboard() {
                                 Start Live Tracking
                             </button>
                         </div>
+
+                        {/* Model Retraining */}
+                        <div className="bg-white rounded-lg shadow-sm border p-6">
+                            <div className="flex items-center mb-4">
+                                <div className="p-3 bg-orange-100 rounded-lg">
+                                    <ModelIcon className="w-6 h-6 text-orange-600" />
+                                </div>
+                                <div className="ml-4">
+                                    <h3 className="text-lg font-semibold text-gray-900">Model Retraining</h3>
+                                    <p className="text-sm text-gray-500">Improve model accuracy</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Training sessions:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.modelRetraining.total}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">Last trained:</span>
+                                    <span className="text-sm font-medium text-gray-900">{stats.modelRetraining.lastUsed}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => window.location.href = '/training'}
+                                className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-md transition-colors">
+                                Start Retraining
+                            </button>
+                        </div>
                     </div>
 
                     {/* Recent Activity */}
@@ -257,10 +303,15 @@ export default function Dashboard() {
                                             {activity.type === 'image' && <ImageIcon className="w-4 h-4 text-blue-500 mr-3" />}
                                             {activity.type === 'video' && <VideoIcon className="w-4 h-4 text-green-500 mr-3" />}
                                             {activity.type === 'live' && <CameraIcon className="w-4 h-4 text-purple-500 mr-3" />}
+                                            {activity.type === 'modelRetraining' && <ModelIcon className="w-4 h-4 text-orange-500 mr-3" />}
                                             <span className="text-sm text-gray-900">{activity.filename}</span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-sm font-medium text-gray-900">{activity.roses} roses</span>
+                                            {activity.type === 'modelRetraining' ? (
+                                                <span className="text-sm font-medium text-gray-900">Training Complete</span>
+                                            ) : (
+                                                <span className="text-sm font-medium text-gray-900">{activity.roses} roses</span>
+                                            )}
                                             <p className="text-xs text-gray-500">{activity.time}</p>
                                         </div>
                                     </div>
@@ -269,7 +320,7 @@ export default function Dashboard() {
                         ) : (
                             <div className="text-center py-8">
                                 <p className="text-gray-500">No recent activity</p>
-                                <p className="text-sm text-gray-400">Start tracking to see your activity here</p>
+                                <p className="text-sm text-gray-400">Start tracking or training to see your activity here</p>
                             </div>
                         )}
                     </div>

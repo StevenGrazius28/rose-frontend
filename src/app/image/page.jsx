@@ -397,7 +397,7 @@ export default function ImageTracking() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-green-800">
-                        Processing Complete! 🌹
+                        Processing Complete!
                       </h3>
                       <p className="text-green-700">
                         Found <strong>{result.number_of_roses}</strong> rose(s) in your image

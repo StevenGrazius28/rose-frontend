@@ -5,8 +5,8 @@ const navigation = [
   { name: 'Image Detection', href: '/image', current: false },
   { name: 'Video Detection', href: '/video', current: false },
   { name: 'Webcam Detection', href: '/webcam', current: false },
+  { name: 'Train Model', href: '/training', current: false }, // Added training link
 ]
-
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ')
