@@ -171,24 +171,68 @@ export default function ImageTracking() {
     setError('');
 
     try {
-      console.log('Sending annotation data:', annotationData);
+      // Extract UUID from download_url and create the actual saved filename
+      // "/tracked-image/1c659428-cdfa-4594-8c66-04820124dc73" → "1c659428-cdfa-4594-8c66-04820124dc73.jpg"
+      const urlParts = result.download_url.split('/');
+      const uuid = urlParts[urlParts.length - 1];
+      const savedFilename = `${uuid}.jpg`;
+      
+      console.log('Original filename:', uploadedFile.name);
+      console.log('Saved filename (UUID):', savedFilename);
+      console.log('Download URL:', result.download_url);
+
+      // Convert bounding boxes to proper annotation format with pixel coordinates
+      const annotations = annotationData.annotation.boxes.map(box => {
+        // Convert normalized coordinates (0-1) back to pixel coordinates for 640x640 image
+        const x_center_pixels = box.x * 640;
+        const y_center_pixels = box.y * 640;
+        const width_pixels = box.width * 640;
+        const height_pixels = box.height * 640;
+        
+        return {
+          class: 0, // Rose class
+          x_center: x_center_pixels,
+          y_center: y_center_pixels,
+          width: width_pixels,
+          height: height_pixels,
+          confidence: 1.0, // User annotation, full confidence
+          source: 'user_correction'
+        };
+      });
+
+      // Prepare the data for the backend - using the actual saved filename (UUID)
+      const correctedAnnotationData = {
+        original_image_path: savedFilename, // Use UUID filename that actually exists
+        annotation: {
+          boxes: annotations,
+          image_dimensions: {
+            width: 640,
+            height: 640
+          },
+          annotation_type: 'user_correction',
+          created_at: new Date().toISOString()
+        }
+      };
+
+      console.log('Sending annotation data:', correctedAnnotationData);
 
       const response = await fetch('http://localhost:5000/retrain/save-annotation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(annotationData),
+        body: JSON.stringify(correctedAnnotationData),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save annotation: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to save annotation: ${response.status}`);
       }
 
       const data = await response.json();
       console.log('Annotation saved:', data);
       
-      alert('Annotations saved successfully! This data will help improve the model.');
+      alert(`${annotations.length} annotation(s) saved successfully! This data will help improve the model.`);
 
     } catch (err) {
       console.error('Error saving annotations:', err);
@@ -377,13 +421,19 @@ export default function ImageTracking() {
                   
                   {/* Embedded image display with annotation feature */}
                   <div className="mt-4">
-                    <div className="flex justify-center relative">
+                    <div className="flex justify-center">
                       <div className="relative inline-block">
+                        {/* Image fixed to 640x640 */}
                         <img
                           ref={imageRef}
                           alt="Processed image with rose annotations"
-                          className="w-full max-w-2xl aspect-auto rounded border border-green-300"
-                          style={{ display: 'none' }}
+                          className="rounded border border-green-300"
+                          style={{ 
+                            display: 'none',
+                            width: '640px',
+                            height: '640px',
+                            objectFit: 'cover'
+                          }}
                         />
                         
                         {/* Reusable Bounding Box Annotator */}

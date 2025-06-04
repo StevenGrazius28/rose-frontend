@@ -5,7 +5,7 @@ const BoundingBoxAnnotator = ({
   isVisible = true, 
   onSaveAnnotations, 
   isSaving = false,
-  mediaType = 'image', // 'image' or 'video'
+  mediaType = 'image',
   originalFileName = '',
   disabled = false 
 }) => {
@@ -26,16 +26,17 @@ const BoundingBoxAnnotator = ({
     setCurrentBox(null);
     setError('');
     
-    // Setup canvas overlay
+    // Setup canvas overlay - always 640x640
     const canvas = canvasRef.current;
     const media = mediaRef.current;
     if (canvas && media) {
-      const rect = media.getBoundingClientRect();
-      canvas.width = media.offsetWidth;
-      canvas.height = media.offsetHeight;
+      canvas.width = 640;
+      canvas.height = 640;
       canvas.style.position = 'absolute';
       canvas.style.top = '0';
       canvas.style.left = '0';
+      canvas.style.width = '640px';
+      canvas.style.height = '640px';
       canvas.style.pointerEvents = 'auto';
       canvas.style.cursor = 'crosshair';
       canvas.style.zIndex = '10';
@@ -186,29 +187,51 @@ const BoundingBoxAnnotator = ({
         const x2 = Math.max(box.startX, box.endX);
         const y2 = Math.max(box.startY, box.endY);
         
-        // Calculate center and dimensions
-        const centerX = (x1 + x2) / 2;
-        const centerY = (y1 + y2) / 2;
-        const width = x2 - x1;
-        const height = y2 - y1;
+        // Calculate center and dimensions in PIXELS first
+        const centerX_pixels = (x1 + x2) / 2;
+        const centerY_pixels = (y1 + y2) / 2;
+        const width_pixels = x2 - x1;
+        const height_pixels = y2 - y1;
         
-        // Normalize to media dimensions
+        // Check minimum size requirement (10x10 pixels)
+        if (width_pixels < 10 || height_pixels < 10) {
+          console.warn(`Box too small: ${width_pixels}x${height_pixels} pixels. Minimum is 10x10 pixels.`);
+          return null; // Skip this box
+        }
+        
+        // NOW normalize to 0-1 range (always based on 640x640)
+        const centerX_normalized = centerX_pixels / 640;
+        const centerY_normalized = centerY_pixels / 640;
+        const width_normalized = width_pixels / 640;
+        const height_normalized = height_pixels / 640;
+        
+        console.log('Box conversion:', {
+          pixels: { centerX_pixels, centerY_pixels, width_pixels, height_pixels },
+          normalized: { centerX_normalized, centerY_normalized, width_normalized, height_normalized },
+          imageSize: { width: 640, height: 640 }
+        });
+        
         return {
           class: 0, // Assuming class 0 for roses
-          x: centerX / media.offsetWidth,
-          y: centerY / media.offsetHeight,
-          width: width / media.offsetWidth,
-          height: height / media.offsetHeight
+          x: centerX_normalized,     // Center X (0-1)
+          y: centerY_normalized,     // Center Y (0-1)
+          width: width_normalized,   // Width (0-1)
+          height: height_normalized  // Height (0-1)
         };
-      });
+      }).filter(ann => ann !== null); // Remove null values (boxes that were too small)
 
-      // Prepare the data for the backend
+      if (annotations.length === 0) {
+        setError('All bounding boxes are too small. Please draw larger boxes (minimum 10x10 pixels).');
+        return;
+      }
+
+      // Prepare the data for the backend - always use 640x640 dimensions
       const annotationData = {
         original_image_path: originalFileName,
         annotation: {
           boxes: annotations,
-          media_width: media.offsetWidth,
-          media_height: media.offsetHeight,
+          media_width: 640,
+          media_height: 640,
           media_type: mediaType,
           created_at: new Date().toISOString()
         }
@@ -236,7 +259,7 @@ const BoundingBoxAnnotator = ({
   if (!isVisible) return null;
 
   return (
-    <>
+    <div className="w-full">
       {/* Controls */}
       <div className="flex items-center justify-between mb-2">
         <h4 className="font-medium text-green-800">
@@ -287,7 +310,7 @@ const BoundingBoxAnnotator = ({
         </div>
       )}
 
-      {/* Canvas Overlay */}
+      {/* Canvas Overlay - This should be positioned relative to the parent container */}
       <canvas
         ref={canvasRef}
         className="absolute top-0 left-0 pointer-events-none"
@@ -305,7 +328,7 @@ const BoundingBoxAnnotator = ({
         <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded">
           <p className="text-sm text-purple-700">
             <strong>Instructions:</strong> Click and drag to draw bounding boxes around roses that weren't detected correctly. 
-            This will help improve the model for future predictions.
+            Boxes must be at least 10x10 pixels in size. This will help improve the model for future predictions.
             {mediaType === 'video' && (
               <span className="block mt-1">
                 <strong>Note:</strong> For videos, annotations will be applied to the current frame.
@@ -314,7 +337,7 @@ const BoundingBoxAnnotator = ({
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
