@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Footer } from '@/components/Footer'
 import NavBar from '@/components/NavBar'
 import { PhotoIcon } from "@heroicons/react/24/solid";
+import BoundingBoxAnnotator from '@/components/BoundingBoxAnnotator';
 
 export default function ImageTracking() {
   const [fileUploaded, setFileUploaded] = useState(false);
@@ -11,6 +12,9 @@ export default function ImageTracking() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [isSavingAnnotation, setIsSavingAnnotation] = useState(false);
+  
+  const imageRef = useRef(null);
 
   const handleUpload = () => {
     if (!uploadedFile) {
@@ -98,7 +102,7 @@ export default function ImageTracking() {
         console.log('Starting image view process...');
         console.log('Download URL:', result.download_url);
         
-        const imageElement = document.getElementById('processedImageDisplay');
+        const imageElement = imageRef.current;
         if (!imageElement) {
           console.error('Image element not found!');
           setError('Image display element not found');
@@ -159,6 +163,38 @@ export default function ImageTracking() {
         const loading = document.getElementById('imageLoading');
         if (loading) loading.remove();
       }
+    }
+  };
+
+  const handleSaveAnnotations = async (annotationData) => {
+    setIsSavingAnnotation(true);
+    setError('');
+
+    try {
+      console.log('Sending annotation data:', annotationData);
+
+      const response = await fetch('http://localhost:5000/retrain/save-annotation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(annotationData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save annotation: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Annotation saved:', data);
+      
+      alert('Annotations saved successfully! This data will help improve the model.');
+
+    } catch (err) {
+      console.error('Error saving annotations:', err);
+      throw new Error(`Failed to save annotations: ${err.message}`);
+    } finally {
+      setIsSavingAnnotation(false);
     }
   };
 
@@ -339,16 +375,28 @@ export default function ImageTracking() {
                     </div>
                   </div>
                   
-                  {/* Embedded image display */}
+                  {/* Embedded image display with annotation feature */}
                   <div className="mt-4">
-                    <h4 className="font-medium text-green-800 mb-2">Processed Image:</h4>
-                    <div className="flex justify-center">
-                      <img
-                        id="processedImageDisplay"
-                        alt="Processed image with rose annotations"
-                        className="w-full max-w-2xl aspect-auto rounded border border-green-300"
-                        style={{ display: 'none' }}
-                      />
+                    <div className="flex justify-center relative">
+                      <div className="relative inline-block">
+                        <img
+                          ref={imageRef}
+                          alt="Processed image with rose annotations"
+                          className="w-full max-w-2xl aspect-auto rounded border border-green-300"
+                          style={{ display: 'none' }}
+                        />
+                        
+                        {/* Reusable Bounding Box Annotator */}
+                        <BoundingBoxAnnotator
+                          mediaRef={imageRef}
+                          isVisible={result !== null}
+                          onSaveAnnotations={handleSaveAnnotations}
+                          isSaving={isSavingAnnotation}
+                          mediaType="image"
+                          originalFileName={uploadedFile?.name || ''}
+                          disabled={false}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
