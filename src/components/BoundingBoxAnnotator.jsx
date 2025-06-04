@@ -304,7 +304,7 @@ const BoundingBoxAnnotator = ({
       {isDrawingMode && (
         <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded">
           <p className="text-sm text-purple-700">
-            <strong>Instructions:</strong> Click and drag to draw bounding boxes around roses that weren't detected correctly. 
+            <strong>Instructions:</strong> Click and drag to draw bounding boxes around roses that were NOt detected correctly.
             This will help improve the model for future predictions.
             {mediaType === 'video' && (
               <span className="block mt-1">
