@@ -9,8 +9,17 @@ import {PhotoIcon} from "@heroicons/react/24/solid";
 export default function Home() {
     const [fileUploaded, setFileUploaded] = useState(false);
     const [uploadedFile, setUploadedFile] = useState(null);
-    const [showWebcam, setShowWebcam] = useState(false);2
+    const [showWebcam, setShowWebcam] = useState(false);
     const videoRef = useRef(null);
+
+    //response streaming
+    const canvasRef = useRef(null);
+    const isProcessing = useRef(false);
+    const intervalRef = useRef(null);
+    const [annotatedFrame, setAnnotatedFrame] = useState(null);
+    const [roseCount, setRoseCount] = useState(0);
+    const [fps, setFps] = useState(0);
+    const [statusMessage, setStatusMessage] = useState('Stream Inactive');
 
     useEffect(() => {
         if (showWebcam && videoRef.current) {
@@ -23,6 +32,62 @@ export default function Home() {
                     alert("Unable to access webcam");
                 });
         }
+    }, [showWebcam]);
+
+    useEffect(() => {
+        if (showWebcam && videoRef.current) {
+            const startStreaming = () => {
+                intervalRef.current = setInterval(async () => {
+                    if (!videoRef.current || !canvasRef.current || isProcessing.current) return;
+
+                    isProcessing.current = true;
+
+                    const canvas = canvasRef.current;
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = videoRef.current.videoWidth;
+                    canvas.height = videoRef.current.videoHeight;
+                    ctx.drawImage(videoRef.current, 0, 0);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+
+                    try {
+                        const response = await fetch("http://localhost:8000/track/realtime/stream", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ image: dataUrl })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            setAnnotatedFrame(result.image);
+                            setRoseCount(result.count);
+                            setFps(result.fps.toFixed(1));
+                            setStatusMessage("Stream Active");
+                        } else {
+                            setStatusMessage("Stream Error");
+                        }
+                    } catch (err) {
+                        console.error("Failed to send frame", err);
+                    }
+
+                    isProcessing.current = false;
+                }, 100); // 10 FPS
+            };
+
+            if (videoRef.current.readyState >= 2) {
+                startStreaming();
+            } else {
+                videoRef.current.onloadeddata = () => startStreaming();
+            }
+        }
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
     }, [showWebcam]);
 
     return (
@@ -75,6 +140,26 @@ export default function Home() {
                                         playsInline
                                         className="w-full aspect-video rounded border border-gray-300"
                                     />
+                                    <canvas ref={canvasRef} className="hidden" />
+                                    {annotatedFrame && (
+                                        <img
+                                            src={annotatedFrame}
+                                            alt="Annotated Frame"
+                                            className="mt-4 w-full aspect-video rounded border border-indigo-400"
+                                        />
+                                    )}
+
+                                    <div className="mt-4 flex flex-wrap gap-6 text-sm text-gray-700">
+                                        <div className="rounded bg-white px-3 py-2 shadow">
+                                            <strong>FPS:</strong> {fps}
+                                        </div>
+                                        <div className="rounded bg-white px-3 py-2 shadow">
+                                            <strong>Rose Count:</strong> {roseCount}
+                                        </div>
+                                        <div className="rounded bg-white px-3 py-2 shadow">
+                                            <strong>Status:</strong> {statusMessage}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
